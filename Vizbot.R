@@ -1,7 +1,7 @@
 
 library(shiny)
 library(ggplot2)
-
+library(Hmisc)
 
 # Define UI for application that draws a histogram
 ui <- fluidPage(
@@ -13,15 +13,15 @@ ui <- fluidPage(
     sidebarLayout(
         sidebarPanel(
             fileInput("file", "Choose CSV File"),
-            textInput("caption", "Caption", "What is the mean of"),
+            textInput("caption", "Do you want basic stats", "Ask Here..."),
             textInput("plot", "Do you want to plot", "Ask Here ...")
-            
         ),
 
         # Show a plot of the generated distribution
         mainPanel(
             verbatimTextOutput("value"),
             tableOutput('table'),
+            verbatimTextOutput("basic_stats"),
             plotOutput("all_plots")
         )
     )
@@ -98,15 +98,34 @@ server <- function(input, output) {
         print(g)
     })
     
-
+    basic_stats_fun <- reactive({
+        
+        data_set = file_read_fun()
+        column_named = unlist(colnames(data_set))
+        total_words = unlist(strsplit(input$caption," "))
+        for (words_f in total_words ){
+            if (words_f == 'describe'){
+                stat_data = describe(data_set)
+            }
+            for (words_f in total_words ){
+                for (col_Word in column_named){
+                    if(words_f == col_Word){
+                        stat_data_temp = data_set[col_Word]
+                        stat_data = describe(stat_data_temp)
+                    }
+                }
+            }
+        }
+        stat_data
+    })
 
     output$value <- renderText({ input$caption })
     output$table <- renderTable(
         head(file_read_fun())
     )
-    output$mean_table <- renderText({ sprintf("Mean is %f",mean_fun()) })
-    output$max_table <- renderText({ sprintf("Max is %f",max_fun()) })
-    output$min_table <- renderText({ sprintf("Max is %f",min_fun()) })
+    #output$mean_table <- renderText({ sprintf("Mean is %f",mean_fun()) })
+    #output$max_table <- renderText({ sprintf("Max is %f",max_fun()) })
+    output$basic_stats <- renderPrint({ basic_stats_fun() })
     
     output$all_plots = renderPlot({
         plot_fun()
